@@ -13,6 +13,46 @@ class TPMMSExerciseTests {
         TPMMSKotlin(blockManager, sortColumnIndex)
     )
 
+
+    @Test
+    fun `run sort`() {
+        val columnDefinition = ColumnDefinition(
+                ColumnDefinition.ColumnType.INTEGER,
+                ColumnDefinition.ColumnType.STRING,
+                ColumnDefinition.ColumnType.DOUBLE,
+        )
+
+        with(DBMS(
+                totalBlocks = 3,
+                blockCapacity = 2
+        )) {
+            val inputRelation = loadRelation(
+                    blockManager, columnDefinition,
+                    TPMMSExerciseTests::class.java.getResourceAsStream("input.csv")!!,
+            )
+            val outputRelation = createOutputRelation(
+                    blockManager, columnDefinition
+            )
+
+            val cost = trackIOCost {
+                val sortOperation = getImplementation(blockManager, 0)
+
+                println(blockManager.usedBlocks == 0)
+                sortOperation.execute(inputRelation, outputRelation)
+                println(blockManager.usedBlocks == 0)
+            }
+
+           /* val controlRelation = loadRelation(
+                    blockManager, columnDefinition,
+                    TPMMSExerciseTests::class.java.getResourceAsStream("sorted_by_col0.output.csv")!!,
+            )
+            assertEquals(controlRelation.joinToString(), outputRelation.joinToString())
+
+            assertEquals(3*6, cost.ioCost)*/
+        }
+    }
+
+
     @Test
     fun `TPMMS sorts test file by column 0`() {
         val columnDefinition = ColumnDefinition(

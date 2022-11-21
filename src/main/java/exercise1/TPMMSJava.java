@@ -6,10 +6,8 @@ import de.hpi.dbs2.dbms.utils.BlockSorter;
 import de.hpi.dbs2.exercise1.SortOperation;
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.PriorityQueue;
 
 @ChosenImplementation(true)
 public class TPMMSJava extends SortOperation {
@@ -21,7 +19,14 @@ public class TPMMSJava extends SortOperation {
     public int estimatedIOCost(@NotNull Relation relation) {
         // TODO implement
         // TODO return 3*"Blockzahl";
-        throw new UnsupportedOperationException("TODO");
+        int relationBlockCount = 0;
+        for (Block ignored : relation) {
+            relationBlockCount++;
+        }
+        int estimatedIOCost = relationBlockCount /* einlesen von allen für first phase */ + relationBlockCount /* schreiben der first phase*/ + relationBlockCount /* lesen der second phase*/ + relationBlockCount /* wegschreiben in second phase */;
+        return estimatedIOCost;
+
+        // int totalMemoryBlockSize = getBlockManager().getFreeBlocks() + getBlockManager().getUsedBlocks();
     }
 
 
@@ -116,7 +121,12 @@ public class TPMMSJava extends SortOperation {
 
     @Override
     public void sort(@NotNull Relation relation, @NotNull BlockOutput output) {
-        // TODO test memory size, can fit all blocks??
+        int numberOfBlocksInMemory = getBlockManager().getFreeBlocks();
+        int numberOfPhaseOneLists = (int) Math.ceil((double) relation.getEstimatedSize() / numberOfBlocksInMemory);
+
+        if (numberOfPhaseOneLists > numberOfBlocksInMemory - 1) {
+            throw new RelationSizeExceedsCapacityException();
+        }
 
 
         ArrayList<ArrayList<Block>> allBlocks = firstPhaseSort(relation);

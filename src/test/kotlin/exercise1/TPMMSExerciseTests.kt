@@ -23,7 +23,7 @@ class TPMMSExerciseTests {
         )
 
         with(DBMS(
-                totalBlocks = 3,
+                totalBlocks = 2,
                 blockCapacity = 2
         )) {
             val inputRelation = loadRelation(
@@ -34,21 +34,10 @@ class TPMMSExerciseTests {
                     blockManager, columnDefinition
             )
 
-            val cost = trackIOCost {
-                val sortOperation = getImplementation(blockManager, 0)
-
-                println(blockManager.usedBlocks == 0)
+            val sortOperation = getImplementation(blockManager, 0)
+            assertFailsWith<SortOperation.RelationSizeExceedsCapacityException> {
                 sortOperation.execute(inputRelation, outputRelation)
-                println(blockManager.usedBlocks == 0)
             }
-
-           /* val controlRelation = loadRelation(
-                    blockManager, columnDefinition,
-                    TPMMSExerciseTests::class.java.getResourceAsStream("sorted_by_col0.output.csv")!!,
-            )
-            assertEquals(controlRelation.joinToString(), outputRelation.joinToString())
-
-            assertEquals(3*6, cost.ioCost)*/
         }
     }
 

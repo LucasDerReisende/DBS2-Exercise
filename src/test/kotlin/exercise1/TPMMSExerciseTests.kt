@@ -13,7 +13,6 @@ class TPMMSExerciseTests {
         TPMMSKotlin(blockManager, sortColumnIndex)
     )
 
-
     @Test
     fun `TPMMS sorts test file by column 0`() {
         val columnDefinition = ColumnDefinition(

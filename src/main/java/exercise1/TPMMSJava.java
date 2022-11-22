@@ -17,16 +17,11 @@ public class TPMMSJava extends SortOperation {
 
     @Override
     public int estimatedIOCost(@NotNull Relation relation) {
-        // TODO implement
-        // TODO return 3*"Blockzahl";
         int relationBlockCount = 0;
         for (Block ignored : relation) {
             relationBlockCount++;
         }
-        int estimatedIOCost = relationBlockCount /* einlesen von allen für first phase */ + relationBlockCount /* schreiben der first phase*/ + relationBlockCount /* lesen der second phase*/ + relationBlockCount /* wegschreiben in second phase */;
-        return estimatedIOCost;
-
-        // int totalMemoryBlockSize = getBlockManager().getFreeBlocks() + getBlockManager().getUsedBlocks();
+        return 4 * relationBlockCount;
     }
 
 
@@ -60,7 +55,6 @@ public class TPMMSJava extends SortOperation {
 
 
     private void secondPhaseSort(@NotNull Relation relation, BlockOutput blockOutput, ArrayList<ArrayList<Block>> allBlockLists) {
-        // TODO laden immer so viele Blöcke, dass wir noch einen Platz haben, also bei 3 capacity, müssten wir nur 2 Laden dürfen
         ArrayList<LinkedList<Tuple>> loadedTuples = new ArrayList<>();
         for (ArrayList<Block> blockList : allBlockLists) {
             Block block = blockList.get(0);
@@ -72,9 +66,8 @@ public class TPMMSJava extends SortOperation {
         }
         Block outBlock = getBlockManager().allocate(true);
         while (true) {
-            int smallestIndex = -1; // not always 0 to begin with
+            int smallestIndex = -1;
             for (int i = 0; i < loadedTuples.size(); i++) {
-                // HERE
                 if (allBlockLists.get(i).size() == 0) {
                     continue;
                 }

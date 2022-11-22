@@ -15,34 +15,6 @@ class TPMMSExerciseTests {
 
 
     @Test
-    fun `run sort`() {
-        val columnDefinition = ColumnDefinition(
-                ColumnDefinition.ColumnType.INTEGER,
-                ColumnDefinition.ColumnType.STRING,
-                ColumnDefinition.ColumnType.DOUBLE,
-        )
-
-        with(DBMS(
-                totalBlocks = 2,
-                blockCapacity = 2
-        )) {
-            val inputRelation = loadRelation(
-                    blockManager, columnDefinition,
-                    TPMMSExerciseTests::class.java.getResourceAsStream("input.csv")!!,
-            )
-            val outputRelation = createOutputRelation(
-                    blockManager, columnDefinition
-            )
-
-            val sortOperation = getImplementation(blockManager, 0)
-            assertFailsWith<SortOperation.RelationSizeExceedsCapacityException> {
-                sortOperation.execute(inputRelation, outputRelation)
-            }
-        }
-    }
-
-
-    @Test
     fun `TPMMS sorts test file by column 0`() {
         val columnDefinition = ColumnDefinition(
             ColumnDefinition.ColumnType.INTEGER,

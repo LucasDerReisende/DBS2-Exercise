@@ -1,9 +1,48 @@
 package de.hpi.dbs2.exercise2;
 
+import exercise2.BPlusTreeJava;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class BPlusTreeNodeTests {
+    @Test
+    public void printTree() {
+        BPlusTreeNode<?> builtTree = BPlusTreeNode.buildTree(4,
+                (Object[]) new AbstractBPlusTree.Entry[][]{
+                        new AbstractBPlusTree.Entry[]{
+                                new AbstractBPlusTree.Entry(2, new ValueReference(0)),
+                                new AbstractBPlusTree.Entry(3, new ValueReference(1)),
+                                new AbstractBPlusTree.Entry(5, new ValueReference(2))
+                        },
+                        new AbstractBPlusTree.Entry[]{
+                                new AbstractBPlusTree.Entry(7, new ValueReference(3)),
+                                new AbstractBPlusTree.Entry(11, new ValueReference(4))
+                        }
+                }
+        );
+        System.out.println(builtTree.toString());
+        BPlusTreeJava tree = new BPlusTreeJava(builtTree);
+        tree.insert(10, new ValueReference(4));
+
+//
+//        Assertions.assertTrue(builtTree.isValid());
+//        InnerNode expectedTree = new InnerNode(4,
+//                new LeafNode(4,
+//                        new AbstractBPlusTree.Entry(2, new ValueReference(0)),
+//                        new AbstractBPlusTree.Entry(3, new ValueReference(1)),
+//                        new AbstractBPlusTree.Entry(5, new ValueReference(2))
+//                ),
+//                new LeafNode(4,
+//                        new AbstractBPlusTree.Entry(7, new ValueReference(3)),
+//                        new AbstractBPlusTree.Entry(11, new ValueReference(4))
+//                )
+//        );
+//        expectedTree.fixLeafLinks();
+//        Assertions.assertTrue(expectedTree.isValid());
+//        Assertions.assertEquals(expectedTree, builtTree);
+    }
+
+
     @Test
     public void testTreeBuilder() {
         BPlusTreeNode<?> builtTree = BPlusTreeNode.buildTree(4,

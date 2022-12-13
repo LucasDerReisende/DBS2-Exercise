@@ -5,16 +5,13 @@ import de.hpi.dbs2.exercise2.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Stack;
+import java.util.*;
 
 /**
  * This is the B+-Tree implementation you will work on.
  * Your task is to implement the insert-operation.
  */
-@ChosenImplementation(false)
+@ChosenImplementation(true)
 public class BPlusTreeJava extends AbstractBPlusTree {
     public BPlusTreeJava(int order) {
         super(order);
@@ -23,89 +20,119 @@ public class BPlusTreeJava extends AbstractBPlusTree {
     public BPlusTreeJava(BPlusTreeNode<?> rootNode) {
         super(rootNode);
     }
-/*
-TODO uncomment
-    private void insertIntoNodeWithoutOverflow(BPlusTreeNode<?> node, Integer key, ValueReference value) {
-        // TODO
-        Integer intermediateKey = null;
-        BPlusTreeNode intermediateValue = null;
-        for (int i = 0; i < node.keys.length; i++) {
-            if (node.keys[i] > key && intermediateKey == null) {
-                intermediateKey = node.keys[i];
-                intermediateValue = (ValueReference) node.references[i];
-
-            }
-        }
-    }
-*/
 
     private void insertIntoNodeWithoutOverflow(InnerNode node, Integer key, BPlusTreeNode<?> value) {
-        Integer intermediateKey;
-        BPlusTreeNode<?> intermediateValue;
-        int shift = 0;
-        for (int i = 0; i < node.keys.length; i++) {
-            intermediateKey = node.keys[i];
-            intermediateValue = node.references[i];
-            if (node.keys[i] > key && shift == 0) {
-                node.keys[i] = key;
-                node.references[i] = value;
-                shift = 1;
+        for (int i = node.keys.length - 2; i >= 0; i--) {
+            if (node.keys[i] == null) {
+                continue;
             }
-            node.keys[i + shift] = intermediateKey;
-            node.references[i + shift] = intermediateValue;
+            if (node.keys[i] > key) {
+                node.keys[i + 1] = node.keys[i];
+                node.references[i + 2] = node.references[i + 1];
+            } else {
+                node.keys[i + 1] = key;
+                node.references[i + 2] = value;
+                return;
+            }
         }
+        node.keys[0] = key;
+        node.references[1] = value;
     }
 
     private void insertIntoNodeWithoutOverflow(LeafNode node, Integer key, ValueReference value) {
-        Integer intermediateKey;
-        ValueReference intermediateValue;
-        int shift = 0;
-        for (int i = 0; i < node.keys.length; i++) {
-            intermediateKey = node.keys[i];
-            intermediateValue = node.references[i];
-            if (node.keys[i] > key && shift == 0) {
-                node.keys[i] = key;
-                node.references[i] = value;
-                shift = 1;
+        for (int i = node.keys.length - 2; i >= 0; i--) {
+            if (node.keys[i] == null) {
+                continue;
             }
-            node.keys[i + shift] = intermediateKey;
-            node.references[i + shift] = intermediateValue;
+            if (node.keys[i] > key) {
+                node.keys[i + 1] = node.keys[i];
+                node.references[i + 1] = node.references[i];
+            } else {
+                node.keys[i + 1] = key;
+                node.references[i + 1] = value;
+                return;
+            }
         }
+        node.keys[0] = key;
+        node.references[0] = value;
     }
 
-    private ValueReference insertIntoNodeWithOverflow(BPlusTreeNode<?> node, Integer key, ValueReference value) {
-        // TODO
-        /* oh shit, overflow*/
-        /* in methode */
-        // neuen node erstellen, rechts neben bereits existierendem
-        // keys und values auf diese verteilen
-        // "next leaf"-pointers updaten
+    private void insertIntoInnerNodeWithOverflow(InnerNode node, Integer key, BPlusTreeNode<?> value, Stack<InnerNode> innerNodeStack) {
+        boolean isRootNode = this.rootNode.equals(node);
+        int numberOfReferencesBefore = (int) Arrays.stream(node.references).takeWhile(Objects::nonNull).count();
+        int numberOfKeysBefore = (int) Arrays.stream(node.keys).takeWhile(Objects::nonNull).count();
 
-        if (/* checke ob n eine Wurzel war, wenn ja*/) {
-            // erstelle neue Wurzel
-            // mache die beiden als kinder
-            return // fertig return
+        int numberOfLeftKeys = (numberOfKeysBefore) / 2;
+        int numberOfRightKeys = (numberOfKeysBefore + 1) / 2;
+
+        int numberOfLeftReferences = numberOfLeftKeys + 1;
+        int numberOfRightReferences = numberOfRightKeys + 1;
+
+        int firstRightKey = node.keys[numberOfLeftKeys];
+        int lastLeftKey = node.keys[numberOfLeftKeys - 1];
+        InnerNode rightNode;
+        Integer largestN1Key;
+        if (key > firstRightKey) {
+            // key is in the right node
+            BPlusTreeNode<?>[] values = new BPlusTreeNode[numberOfRightReferences - 1];
+            values[0] = node.references[numberOfLeftReferences];
+            node.references[numberOfLeftReferences] = null;
+            for (int i = numberOfLeftReferences + 1; i < numberOfReferencesBefore; i++) {
+                values[i - numberOfLeftReferences] = node.references[i];
+                node.keys[i - 1] = null;
+                node.references[i] = null;
+            }
+            rightNode = new InnerNode(order, values);
+            insertIntoNodeWithoutOverflow(rightNode, key, value);
+            largestN1Key = node.keys[numberOfLeftKeys];
         }
-
-        if (/*blatt*/) {
-            /* kopiere kleinster aus n2 nach oben*/
-        } else {
-            /* ziehe größten Schlüssel in n1 nach oben*/
+        else {
+            // key is in the left node
+            BPlusTreeNode<?>[] values = new BPlusTreeNode[numberOfRightReferences];
+            if (key > lastLeftKey) {
+                // key is most right in left node
+                values[0] = value;
+                rightNode = fillRightNode(node, numberOfReferencesBefore, numberOfLeftReferences, values);
+                largestN1Key = key;
+            } else {
+                values[0] = node.references[numberOfLeftReferences - 1];
+                node.references[numberOfLeftReferences - 1] = null;
+                rightNode = fillRightNode(node, numberOfReferencesBefore, numberOfLeftReferences, values);
+                insertIntoNodeWithoutOverflow(node, key, value);
+                largestN1Key = node.keys[numberOfLeftKeys];
+            }
         }
-        /* insert gemäß obriger Methode*/
+        node.keys[numberOfLeftKeys] = null;
 
-        /* bei oh shit overflow weitermachen mit elternknoten */
-        return null;
+        if (checkNewRoot(node, isRootNode, rightNode)) return;
+
+        InnerNode parentNode = innerNodeStack.pop();
+        insertIntoInnerNode(parentNode, largestN1Key, rightNode, innerNodeStack);
     }
 
-    private ValueReference insertIntoLeafNodeWithOverflow(LeafNode node, Integer key, ValueReference value) {
-        // TODO
-        /* oh shit, overflow*/
-        /* in methode */
-        // neuen node erstellen, rechts neben bereits existierendem
-        // keys und values auf diese verteilen
-        // "next leaf"-pointers updaten
+    @NotNull
+    private InnerNode fillRightNode(InnerNode node, int numberOfReferencesBefore, int numberOfLeftReferences, BPlusTreeNode<?>[] values) {
+        InnerNode rightNode;
+        for (int i = numberOfLeftReferences; i < numberOfReferencesBefore; i++) {
+            values[i - numberOfLeftReferences + 1] = node.references[i];
+            node.keys[i - 1] = null;
+            node.references[i] = null;
+        }
+        rightNode = new InnerNode(order, values);
+        return rightNode;
+    }
 
+    private void insertIntoInnerNode(InnerNode node, Integer key, BPlusTreeNode<?> value, Stack<InnerNode> innerNodeStack) {
+        if (Arrays.stream(node.keys).takeWhile(Objects::nonNull).count() < node.n) {
+            insertIntoNodeWithoutOverflow(node, key, value);
+            updateParents(key);
+            return;
+        }
+        insertIntoInnerNodeWithOverflow(node, key, value, innerNodeStack);
+    }
+
+    private void insertIntoLeafNodeWithOverflow(LeafNode node, Integer key, ValueReference value) {
+        Stack<InnerNode> innerNodeStack = getPathStack(key);
         boolean isRootNode = this.rootNode.equals(node);
 
         int beforeCount = (int) node.getEntries().count();
@@ -113,38 +140,58 @@ TODO uncomment
         // +2 -> +1 for additional element, +1 for correct division
         int firstCount = (beforeCount + 2) / 2;
 
-        Entry[] entries = new Entry[beforeCount + 1 - firstCount];
-        for (int i = firstCount; i < beforeCount; i++) {
-            entries[i-firstCount] = new Entry(node.keys[i], node.references[i]);
-            node.keys[i] = null;
-            node.references[i] = null;
-        }
-        LeafNode nextNode = new LeafNode(node.order, entries);
-        nextNode.nextSibling = node.nextSibling;
-        node.nextSibling = nextNode;
-
-        if (isRootNode) {
-            // erstelle neue Wurzel
-            // setze node und nextNode als Kinder
-            BPlusTreeNode<?>[] nodes = {node, nextNode};
-            this.rootNode = new InnerNode(node.order, nodes);
-            return value;
-        }
-
-        if (/*blatt*/) {
-            /* kopiere kleinster aus n2 nach oben*/
+        LeafNode rightNode;
+        if (key > node.keys[firstCount - 1]) {
+            // new value is in new node
+            Entry[] entries = new Entry[beforeCount - firstCount];
+            for (int i = firstCount; i < beforeCount; i++) {
+                entries[i - firstCount] = new Entry(node.keys[i], node.references[i]);
+                node.keys[i] = null;
+                node.references[i] = null;
+            }
+            rightNode = new LeafNode(node.order, entries);
+            insertIntoNodeWithoutOverflow(rightNode, key, value);
         } else {
-            /* ziehe größten Schlüssel in n1 nach oben*/
+            // new value is in old node
+            Entry[] entries = new Entry[beforeCount + 1 - firstCount];
+            for (int i = firstCount - 1; i < beforeCount; i++) {
+                entries[i - (firstCount - 1)] = new Entry(node.keys[i], node.references[i]);
+                node.keys[i] = null;
+                node.references[i] = null;
+            }
+            rightNode = new LeafNode(node.order, entries);
+            insertIntoNodeWithoutOverflow(node, key, value);
         }
-        /* insert gemäß obriger Methode*/
 
-        /* bei oh shit overflow weitermachen mit elternknoten */
-        return null;
+        if (node.getClass() == InitialRootNode.class) {
+            Entry[] entries1 = new Entry[node.getNodeSize()];
+            for (int i = 0; i < node.getNodeSize(); i++) {
+                entries1[i] = new Entry(node.keys[i], node.references[i]);
+            }
+            node = new LeafNode(node.order, entries1);
+        }
+
+        rightNode.nextSibling = node.nextSibling;
+        node.nextSibling = rightNode;
+
+        if (checkNewRoot(node, isRootNode, rightNode)) return;
+
+        // ist blatt
+        /* insert gemäß obiger Methode*/
+        InnerNode parentNode = innerNodeStack.pop();
+        Integer smallestN2Key = rightNode.getSmallestKey();
+        insertIntoInnerNode(parentNode, smallestN2Key, rightNode, innerNodeStack);
     }
 
-    private void splitNode(BPlusTreeNode<?> node) {
-
-        return;
+    private boolean checkNewRoot(BPlusTreeNode<?> node, boolean isRootNode, BPlusTreeNode<?> nextNode) {
+        if (isRootNode) {
+            // create new root
+            // set node and nextNode as children
+            BPlusTreeNode<?>[] nodes = {node, nextNode};
+            this.rootNode = new InnerNode(node.order, nodes);
+            return true;
+        }
+        return false;
     }
 
 
@@ -162,15 +209,6 @@ TODO uncomment
         }
     }
 
-//    private Stack<BPlusTreeNode<?>> getPathStack(Integer key) {
-//        // TODO check polymorphism
-//        Stack<BPlusTreeNode<?>> pathStack = new Stack<>();
-//        pathStack.push(this.getRootNode());
-//        while (isInnerNode(pathStack.peek())) {
-//            pathStack.push(getChild(pathStack.peek(), key));
-//        }
-//        return pathStack;
-//    }
 
     private Stack<InnerNode> getPathStack(Integer key) {
         Stack<InnerNode> innerPathStack = new Stack<>();
@@ -180,14 +218,14 @@ TODO uncomment
             return innerPathStack;
         }
         while (innerPathStack.peek().getHeight() > 1) {
-            innerPathStack.push((InnerNode) innerPathStack.peek().getChildNode(key));
+            innerPathStack.push((InnerNode) innerPathStack.peek().selectChild(key));
         }
         return innerPathStack;
     }
 
-    private int getIndexInArray(Integer[] array, int key) {
+    private int getIndexInArray(Integer[] array, Integer key) {
         for (int i = 0; i < array.length; i++) {
-            if (array[i] == key) {
+            if (Objects.equals(array[i], key)) {
                 return i;
             }
         }
@@ -206,58 +244,14 @@ TODO uncomment
             return oldValue;
         }
 
-        Stack<InnerNode> pathStack = getPathStack(key);
-
         if (leafWithInsertion.getEntries().count() < leafWithInsertion.n) {
             insertIntoNodeWithoutOverflow(leafWithInsertion, key, value);
             updateParents(key);
-            return value;
-        }
-        return insertIntoLeafNodeWithOverflow(leafWithInsertion, key, value);
-
-        //////// OLD ///////////
-        // TODO check key exists? overwrite
-        if (key == 0) {
             return null;
-        } else {
-            if (leafWithInsertion.getEntries().count() < leafWithInsertion.n) {
-                // is platz, kein overflow
-                // TODO Uncomment insertIntoNodeWithoutOverflow(leafWithInsertion, key, value);
-                return value;
-            }
-            // TODO Uncomment Stack<BPlusTreeNode<?>> pathStack = getPathStack();
         }
+        insertIntoLeafNodeWithOverflow(leafWithInsertion, key, value);
+        return null;
 
-
-        List<Entry> entryList = leafWithInsertion.getEntries().toList();
-
-        Integer[] outKeyArray = new Integer[entryList.size() + 1];
-        ValueReference[] outValueArray = new ValueReference[entryList.size() + 1];
-
-        int inserted = 0;
-        for (int i = 0; i < entryList.size(); i++) {
-            if (entryList.get(i).getKey() > key && inserted == 0) {
-                outKeyArray[i] = key;
-                outValueArray[i] = value;
-                inserted++;
-            }
-            outKeyArray[i + inserted] = entryList.get(i).getKey();
-            outValueArray[i + inserted] = entryList.get(i).getValue();
-        }
-        // TODO Uncomment leafWithInsertion.keys = outKeyArray;
-        // TODO Uncomment  leafWithInsertion.values = outValueArray;
-
-//        for (int i = 0; i < leafWithInsertion.keys.length; i++) {
-//            if (leafWithInsertion.keys[i] > key) {
-//                leafWithInsertion.keys = {leafWithInsertion.keys[:i],key, leafWithInsertion.keys[i:]...};
-//                leafWithInsertion.keys = new Integer[leafWithInsertion.keys.lenght + 1];
-//            }
-//        }
-//        toInsertLeaf.
-
-
-        return new ValueReference(10);
-//        throw new UnsupportedOperationException("~~~ your implementation here ~~~");
         // Find LeafNode in which the key has to be inserted.
         //   It is a good idea to track the "path" to the LeafNode in a Stack or something alike.
         // Does the key already exist? Overwrite!

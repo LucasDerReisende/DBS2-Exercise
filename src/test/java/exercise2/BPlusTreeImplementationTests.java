@@ -50,6 +50,43 @@ public class BPlusTreeImplementationTests {
         Assertions.assertIterableEquals(expectedEntries, entries);
     }
 
+
+    @Test
+    public void testTreeInsertManyRandomSets() {
+        for (int order = 3; order < 5; order++) {
+            System.out.println("Running order: " + order);
+            for (int seed = 0; seed < 100; seed++) {
+                System.out.println("Running seed: " + seed);
+                for (int entryCount = 5; entryCount < 200; entryCount++) {
+                    AbstractBPlusTree tree = getImplementation(order);
+                    Random random = new Random(seed);
+                    List<Integer> keys = new ArrayList<>(
+                            IntStream.range(0, entryCount).boxed().toList()
+                    );
+                    Collections.shuffle(keys, random);
+                    List<AbstractBPlusTree.Entry> expectedEntries = new ArrayList<>(entryCount);
+
+                    for (int i = 0; i < keys.size(); i++) {
+                        AbstractBPlusTree.Entry entry = new AbstractBPlusTree.Entry(
+                                // "random" key -> linear value
+                                keys.get(i), new ValueReference(i)
+                        );
+                        expectedEntries.add(entry);
+                        tree.insert(entry);
+                        Assertions.assertTrue(tree.isValid());
+                    }
+                    expectedEntries.sort(Comparator.comparingInt(
+                            AbstractBPlusTree.Entry::getKey
+                    ));
+
+                    List<AbstractBPlusTree.Entry> entries = tree.getEntries().toList();
+                    Assertions.assertEquals(entryCount, entries.size());
+                    Assertions.assertIterableEquals(expectedEntries, entries);
+                }
+            }
+        }
+    }
+
     @Test
     public void testTreeInsert() {
         AbstractBPlusTree expectedTree = new ReadOnlyBPlusTree(BPlusTreeNode.buildTree(4,
